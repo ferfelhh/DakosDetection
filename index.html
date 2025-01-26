@@ -3,125 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Διάγνωση Δάκου στις Ελιές</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <title>Olive Detection with Dakos</title>
   <style>
+    /* Κεντράρισμα όλης της σελίδας */
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      padding: 20px;
+      background-color: #f4f4f4;
+      font-family: Arial, sans-serif;
+      flex-direction: column;
     }
-    h1 {
-      color: #333;
-      font-size: 2rem;
-    }
-    p {
-      font-size: 1.2rem;
-      color: #555;
-    }
-    input[type="file"] {
-      margin: 15px 0;
-    }
+
+    /* Κεντράρισμα της εικόνας */
     img {
-      margin: 20px 0;
-      max-width: 300px;
-      border: 2px solid #ccc;
-      border-radius: 8px;
+      max-width: 90%;
+      max-height: 80vh;
+      object-fit: contain;
+      margin: 0;
+      display: none; /* Αρχικά κρυφή */
     }
+
+    /* Στυλ για το κουμπί */
     button {
-      padding: 10px 20px;
-      background-color: #28a745;
+      background-color: #4CAF50;
       color: white;
-      font-size: 1rem;
       border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #218838;
-    }
-    #results {
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
       margin-top: 20px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #007bff;
+      cursor: pointer;
+      border-radius: 5px;
     }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    /* Στυλ για το τίτλο */
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    /* Στυλ για το input αρχείου */
+    input[type="file"] {
+      margin: 20px 0;
+    }
+
   </style>
 </head>
 <body>
-  <h1>Διάγνωση Δάκου στις Ελιές</h1>
-  <p>Ανέβασε μια εικόνα ελιάς για ανάλυση:</p>
+  <h1>Olive Detection - Dakos</h1>
+  
+  <!-- Επιλογή εικόνας -->
+  <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
 
-  <!-- Επιλογή αρχείου -->
-  <input type="file" id="file-input" accept="image/*" />
-  
-  <!-- Εμφάνιση εικόνας -->
-  <img id="uploaded-image" alt="Η εικόνα σας θα εμφανιστεί εδώ" style="display: none;" />
-  
-  <!-- Κουμπί ανάλυσης -->
-  <button id="analyze-button">Ανάλυση</button>
-  
-  <!-- Αποτελέσματα -->
-  <p id="results"></p>
+  <!-- Εδώ η εικόνα θα εμφανίζεται κεντραρισμένη -->
+  <img id="olive-image" alt="Olive with Dakos">
 
+  <!-- Το κουμπί για ανίχνευση -->
+  <button onclick="predict()">Detect Dakos</button>
+  
+  <p id="result"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script>
-    // URL του μοντέλου
-    const modelURL = "model/model.json";
-    let model;
+    let image = null; // Αρχικοποίηση μεταβλητής εικόνας
 
-    // Φόρτωση του μοντέλου
-    async function loadModel() {
-      try {
-        model = await tf.loadGraphModel(modelURL);
-        console.log("Το μοντέλο φορτώθηκε!");
-      } catch (error) {
-        console.error("Αποτυχία φόρτωσης του μοντέλου:", error);
-        document.getElementById("results").innerText = "Αποτυχία φόρτωσης του μοντέλου.";
-      }
+    // Φόρτωμα της εικόνας που επιλέχθηκε
+    function loadImage(event) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const imgElement = document.getElementById('olive-image');
+        imgElement.src = reader.result;
+        imgElement.style.display = 'block'; // Εμφάνιση της εικόνας
+        imgElement.onload = () => {
+          // Όταν η εικόνα φορτωθεί, ενημερώνουμε τη μεταβλητή image
+          image = imgElement;
+        }
+      };
+      reader.readAsDataURL(event.target.files[0]);
     }
 
-    // Επεξεργασία εικόνας και πρόβλεψη
-    async function analyzeImage() {
-      const imgElement = document.getElementById("uploaded-image");
-      if (!model) {
-        document.getElementById("results").innerText = "Το μοντέλο δεν είναι διαθέσιμο.";
+    // Φόρτωμα του μοντέλου
+    async function loadModel() {
+      const modelURL = 'https://ferfelhh.github.io/DakosDetection/model.json';
+      const model = await tf.loadGraphModel(modelURL);
+      return model;
+    }
+
+    async function predict() {
+      if (!image) {
+        alert("Please select an image first.");
         return;
       }
 
-      try {
-        const tensor = tf.browser.fromPixels(imgElement)
-          .resizeNearestNeighbor([224, 224])
-          .toFloat()
-          .expandDims();
+      const model = await loadModel();
+      const imgElement = document.getElementById('olive-image');
 
-        const predictions = await model.predict(tensor).data();
-        const result = predictions[0] > predictions[1] ? "Υγιής" : "Προσβεβλημένη από δάκο";
-        document.getElementById("results").innerText = `Αποτέλεσμα: ${result}`;
-      } catch (error) {
-        console.error("Σφάλμα κατά την ανάλυση:", error);
-        document.getElementById("results").innerText = "Σφάλμα κατά την ανάλυση.";
-      }
+      // Προετοιμασία εικόνας για το μοντέλο
+      const tensorImg = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+      
+      // Πρόβλεψη με το μοντέλο
+      const prediction = await model.predict(tensorImg);
+      console.log(prediction);
+
+      // Εμφάνιση της πρόβλεψης
+      const result = prediction.dataSync()[0] > 0.5 ? "Olive has Dakos!" : "Olive does not have Dakos.";
+      document.getElementById("result").innerText = result;
     }
-
-    // Φόρτωμα εικόνας
-    document.getElementById("file-input").addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = document.getElementById("uploaded-image");
-        img.src = e.target.result;
-        img.style.display = "block";
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // Κουμπί ανάλυσης
-    document.getElementById("analyze-button").addEventListener("click", analyzeImage);
-
-    // Φόρτωση του μοντέλου
-    loadModel();
   </script>
 </body>
 </html>
