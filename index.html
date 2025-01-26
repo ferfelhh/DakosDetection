@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olive Detection with Dakos</title>
+  <style>
+    /* Κεντράρισμα όλης της σελίδας */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f4f4f4;
+      font-family: Arial, sans-serif;
+      flex-direction: column;
+    }
+
+    /* Κεντράρισμα της εικόνας */
+    img {
+      max-width: 90%;
+      max-height: 80vh;
+      object-fit: contain;
+      margin: 0;
+      display: none; /* Αρχικά κρυφή */
+    }
+
+    /* Στυλ για το κουμπί */
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin-top: 20px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    /* Στυλ για το τίτλο */
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    /* Στυλ για το input αρχείου */
+    input[type="file"] {
+      margin: 20px 0;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>Olive Detection - Dakos</h1>
+  
+  <!-- Επιλογή εικόνας -->
+  <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
+
+  <!-- Εδώ η εικόνα θα εμφανίζεται κεντραρισμένη -->
+  <img id="olive-image" alt="Olive with Dakos">
+
+  <!-- Το κουμπί για ανίχνευση -->
+  <button onclick="predict()">Detect Dakos</button>
+  
+  <p id="result"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script>
+    let image = null; // Αρχικοποίηση μεταβλητής εικόνας
+
+    // Φόρτωμα της εικόνας που επιλέχθηκε
+    function loadImage(event) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const imgElement = document.getElementById('olive-image');
+        imgElement.src = reader.result;
+        imgElement.style.display = 'block'; // Εμφάνιση της εικόνας
+        imgElement.onload = () => {
+          console.log("Image loaded successfully!"); // Δοκιμαστικό μήνυμα
+          image = imgElement; // Ενημέρωση της εικόνας
+        };
+      };
+      reader.readAsDataURL(event.target.files[0]);
+    }
+
+    // Φόρτωμα του μοντέλου
+    async function loadModel() {
+      console.log("Loading model...");
+      try {
+        const modelURL = 'https://ferfelhh.github.io/DakosDetection/';
+        const model = await tf.loadGraphModel(modelURL);
+        console.log("Model loaded successfully!"); // Δοκιμαστικό μήνυμα
+        return model;
+      } catch (error) {
+        console.error("Error loading model:", error);
+        alert("Error loading model!");
+      }
+    }
+
+    async function predict() {
+      if (!image) {
+        alert("Please select an image first.");
+        return;
+      }
+
+      console.log("Starting prediction...");
+      const model = await loadModel();
+      if (!model) return;
+
+      const imgElement = document.getElementById('olive-image');
+
+      // Προετοιμασία εικόνας για το μοντέλο
+      const tensorImg = tf.browser.fromPixels(imgElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+
+      // Πρόβλεψη με το μοντέλο
+      const prediction = await model.predict(tensorImg);
+      console.log(prediction);
+
+      // Εμφάνιση της πρόβλεψης
+      const result = prediction.dataSync()[0] > 0.5 ? "Olive has Dakos!" : "Olive does not have Dakos.";
+      document.getElementById("result").innerText = result;
+    }
+  </script>
+</body>
+</html>
