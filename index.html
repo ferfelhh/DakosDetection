@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Διάγνωση Δάκου στις Ελιές</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+      font-size: 2rem;
+    }
+    p {
+      font-size: 1.2rem;
+      color: #555;
+    }
+    input[type="file"] {
+      margin: 15px 0;
+    }
+    img {
+      margin: 20px 0;
+      max-width: 300px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    #results {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Διάγνωση Δάκου στις Ελιές</h1>
+  <p>Ανέβασε μια εικόνα ελιάς για ανάλυση:</p>
+
+  <!-- Επιλογή αρχείου -->
+  <input type="file" id="file-input" accept="image/*" />
+  
+  <!-- Εμφάνιση εικόνας -->
+  <img id="uploaded-image" alt="Η εικόνα σας θα εμφανιστεί εδώ" style="display: none;" />
+  
+  <!-- Κουμπί ανάλυσης -->
+  <button id="analyze-button">Ανάλυση</button>
+  
+  <!-- Αποτελέσματα -->
+  <p id="results"></p>
+
+  <script>
+    // URL του μοντέλου
+    const modelURL = "model/model.json";
+    let model;
+
+    // Φόρτωση του μοντέλου
+    async function loadModel() {
+      try {
+        model = await tf.loadGraphModel(modelURL);
+        console.log("Το μοντέλο φορτώθηκε!");
+      } catch (error) {
+        console.error("Αποτυχία φόρτωσης του μοντέλου:", error);
+        document.getElementById("results").innerText = "Αποτυχία φόρτωσης του μοντέλου.";
+      }
+    }
+
+    // Επεξεργασία εικόνας και πρόβλεψη
+    async function analyzeImage() {
+      const imgElement = document.getElementById("uploaded-image");
+      if (!model) {
+        document.getElementById("results").innerText = "Το μοντέλο δεν είναι διαθέσιμο.";
+        return;
+      }
+
+      try {
+        const tensor = tf.browser.fromPixels(imgElement)
+          .resizeNearestNeighbor([224, 224])
+          .toFloat()
+          .expandDims();
+
+        const predictions = await model.predict(tensor).data();
+        const result = predictions[0] > predictions[1] ? "Υγιής" : "Προσβεβλημένη από δάκο";
+        document.getElementById("results").innerText = `Αποτέλεσμα: ${result}`;
+      } catch (error) {
+        console.error("Σφάλμα κατά την ανάλυση:", error);
+        document.getElementById("results").innerText = "Σφάλμα κατά την ανάλυση.";
+      }
+    }
+
+    // Φόρτωμα εικόνας
+    document.getElementById("file-input").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.getElementById("uploaded-image");
+        img.src = e.target.result;
+        img.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Κουμπί ανάλυσης
+    document.getElementById("analyze-button").addEventListener("click", analyzeImage);
+
+    // Φόρτωση του μοντέλου
+    loadModel();
+  </script>
+</body>
+</html>
